@@ -9,12 +9,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Copy App
+      - name: Create Zeu App
         run: |
-          rm -rf app
-          git clone https://github.com/watspartacus-sys/spendlimits temp
-          cp -r temp/app app
+          mkdir -p app/src/main/java/com/zeu/savings
           echo "include ':app'" > settings.gradle
+          echo "buildscript{repositories{google();mavenCentral()}dependencies{classpath'com.android.tools.build:gradle:8.2.1'}}allprojects{repositories{google();mavenCentral()}}" > build.gradle
+          echo "plugins{id'com.android.application'}android{namespace'com.zeu.savings' compileSdk 34 defaultConfig{applicationId'com.zeu.savings' minSdk 21 targetSdk 34 versionCode 1 versionName'1.0'}}" > app/build.gradle
+          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application android:label="Zeu Savings"><activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application></manifest>' > app/src/main/AndroidManifest.xml
+          printf 'package com.zeu.savings;\nimport android.app.Activity;\nimport android.os.Bundle;\nimport android.widget.TextView;\npublic class MainActivity extends Activity{protected void onCreate(Bundle b){super.onCreate(b);TextView t=new TextView(this);t.setText("ZEU SAVINGS\\nOffline Village App\\nUnlimited Members\\nFlexible Savings\\nLoan with Deadline\\nShare-Out Period\\n\\nAll offline, saved on phone");setContentView(t);}}\n' > app/src/main/java/com/zeu/savings/MainActivity.java
       - name: Build
         run: wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip && unzip -q gradle-8.5-bin.zip &&./gradle-8.5/bin/gradle assembleDebug
       - name: Upload APK
