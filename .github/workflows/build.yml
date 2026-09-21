@@ -1,4 +1,4 @@
-name: Build
+name: Build Zeu Full
 on: [push]
 jobs:
   build:
@@ -9,19 +9,43 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Create Files
+      - name: Create Full App
         run: |
           rm -rf app
           mkdir -p app/src/main/java/com/zeu/savings
           echo "include ':app'" > settings.gradle
           printf "buildscript{\n repositories{google();mavenCentral()}\n dependencies{classpath 'com.android.tools.build:gradle:8.2.1'}\n}\nallprojects{repositories{google();mavenCentral()}}\n" > build.gradle
-          printf "apply plugin:'com.android.application'\nandroid{\n namespace'com.zeu.savings'\n compileSdk 34\n defaultConfig{applicationId'com.zeu.savings';minSdk 21;targetSdk 34;versionCode 1;versionName'1.0'}\n}\n" > app/build.gradle
+          printf "apply plugin:'com.android.application'\nandroid{\n namespace'com.zeu.savings'\n compileSdk 34\n defaultConfig{applicationId'com.zeu.savings';minSdk 21;targetSdk 34;versionCode 2;versionName'2.0'}\n}\n" > app/build.gradle
           echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application android:label="Zeu Savings"><activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application></manifest>' > app/src/main/AndroidManifest.xml
-          printf 'package com.zeu.savings;\nimport android.app.Activity;\nimport android.os.Bundle;\nimport android.widget.TextView;\npublic class MainActivity extends Activity{protected void onCreate(Bundle b){super.onCreate(b);TextView t=new TextView(this);t.setText("ZEU SAVINGS Offline");setContentView(t);}}\n' > app/src/main/java/com/zeu/savings/MainActivity.java
+          python3 << 'PY'
+          code='''package com.zeu.savings;
+          import android.app.Activity;import android.app.AlertDialog;import android.os.Bundle;import android.widget.*;import java.util.*;import java.io.*;import android.text.InputType;
+          public class MainActivity extends Activity {
+          LinearLayout mainLayout;Map<String, Double> savings = new HashMap<>();Map<String, Loan> loans = new HashMap<>();List<String> members = new ArrayList<>();TextView statusView;String FILE="zeu_data.txt";
+          static class Loan{double amount;String deadline;double interest;Loan(double a,String d,double i){amount=a;deadline=d;interest=i;}}
+          protected void onCreate(Bundle b){super.onCreate(b);loadData();mainLayout=new LinearLayout(this);mainLayout.setOrientation(LinearLayout.VERTICAL);mainLayout.setPadding(30,30,30,30);
+          TextView title=new TextView(this);title.setText("ZEU SAVINGS - Village App\\nOffline");title.setTextSize(18);mainLayout.addView(title);statusView=new TextView(this);mainLayout.addView(statusView);updateStatus();
+          addBtn("Add Member (Unlimited)",()->addMember());addBtn("Add Flexible Savings",()->addSavings());addBtn("Give Loan + Deadline",()->addLoan());addBtn("View All",()->viewAll());addBtn("Share-Out",()->shareOut());addBtn("Clear Data",()->clearData());
+          ScrollView sv=new ScrollView(this);sv.addView(mainLayout);setContentView(sv);}
+          void addBtn(String t,Runnable r){Button b=new Button(this);b.setText(t);b.setOnClickListener(v->r.run());mainLayout.addView(b);}
+          void addMember(){EditText et=new EditText(this);et.setHint("Member name");new AlertDialog.Builder(this).setTitle("Add Member").setView(et).setPositiveButton("Add",(d,w)->{String n=et.getText().toString().trim();if(!n.isEmpty()&&!members.contains(n)){members.add(n);savings.put(n,0.0);saveData();updateStatus();Toast.makeText(this,"Added "+n,0).show();}}).setNegativeButton("Cancel",null).show();}
+          void addSavings(){if(members.isEmpty()){Toast.makeText(this,"Add member first",0).show();return;}LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);Spinner sp=new Spinner(this);sp.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,members));EditText et=new EditText(this);et.setHint("Amount");et.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);l.addView(sp);l.addView(et);new AlertDialog.Builder(this).setTitle("Add Savings").setView(l).setPositiveButton("Save",(d,w)->{try{String n=members.get(sp.getSelectedItemPosition());double a=Double.parseDouble(et.getText().toString());savings.put(n,savings.getOrDefault(n,0.0)+a);saveData();updateStatus();Toast.makeText(this,"Saved "+a,0).show();}catch(Exception e){Toast.makeText(this,"Invalid",0).show();}}).setNegativeButton("Cancel",null).show();}
+          void addLoan(){if(members.isEmpty()){Toast.makeText(this,"Add member first",0).show();return;}LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);Spinner sp=new Spinner(this);sp.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,members));EditText amt=new EditText(this);amt.setHint("Loan amount");amt.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);EditText date=new EditText(this);date.setHint("Deadline e.g. 2026-12-31");EditText intr=new EditText(this);intr.setHint("Interest %");intr.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);l.addView(sp);l.addView(amt);l.addView(date);l.addView(intr);new AlertDialog.Builder(this).setTitle("Loan").setView(l).setPositiveButton("Give Loan",(d,w)->{try{String n=members.get(sp.getSelectedItemPosition());double a=Double.parseDouble(amt.getText().toString());double i=intr.getText().toString().isEmpty()?0:Double.parseDouble(intr.getText().toString());loans.put(n,new Loan(a,date.getText().toString(),i));saveData();updateStatus();Toast.makeText(this,"Loan to "+n,0).show();}catch(Exception e){Toast.makeText(this,"Check",0).show();}}).setNegativeButton("Cancel",null).show();}
+          void viewAll(){StringBuilder sb=new StringBuilder();double t=0;for(String m:members){double s=savings.getOrDefault(m,0.0);t+=s;sb.append(m).append(": ").append(s);if(loans.containsKey(m)){Loan ln=loans.get(m);sb.append(" | Loan ").append(ln.amount).append(" dl ").append(ln.deadline);}sb.append("\\n");}sb.append("\\nTotal: ").append(t);new AlertDialog.Builder(this).setTitle("All Records").setMessage(sb.toString()).setPositiveButton("OK",null).show();}
+          void shareOut(){if(members.isEmpty()){Toast.makeText(this,"No members",0).show();return;}double tot=0;for(double v:savings.values())tot+=v;double lt=0;for(Loan l:loans.values())lt+=l.amount+l.amount*l.interest/100;double grand=tot+lt;double per=grand/members.size();new AlertDialog.Builder(this).setTitle("Share-Out").setMessage("Savings: "+tot+"\\nLoans+Int: "+lt+"\\nGrand: "+grand+"\\nEach: "+String.format("%.2f",per)).setPositiveButton("OK",null).show();}
+          void clearData(){new AlertDialog.Builder(this).setTitle("Clear?").setMessage("Delete all?").setPositiveButton("Yes",(d,w)->{members.clear();savings.clear();loans.clear();saveData();updateStatus();Toast.makeText(this,"Cleared",0).show();}).setNegativeButton("No",null).show();}
+          void updateStatus(){statusView.setText("Members: "+members.size()+" (Unlimited)\\nTotal: "+getTotal()+"\\nLoans: "+loans.size()+"\\nOffline");}
+          double getTotal(){double t=0;for(double v:savings.values())t+=v;return t;}
+          void saveData(){try{FileOutputStream fos=openFileOutput(FILE,MODE_PRIVATE);StringBuilder sb=new StringBuilder();for(String m:members)sb.append("M:").append(m.replace(":","")).append("\\n");for(Map.Entry<String,Double> e:savings.entrySet())sb.append("S:").append(e.getKey().replace(":","")).append(":").append(e.getValue()).append("\\n");for(Map.Entry<String,Loan> e:loans.entrySet())sb.append("L:").append(e.getKey().replace(":","")).append(":").append(e.getValue().amount).append(":").append(e.getValue().deadline.replace(":","")).append(":").append(e.getValue().interest).append("\\n");fos.write(sb.toString().getBytes());fos.close();}catch(Exception e){}}
+          void loadData(){try{FileInputStream fis=openFileInput(FILE);BufferedReader br=new BufferedReader(new InputStreamReader(fis));String line;while((line=br.readLine())!=null){if(line.startsWith("M:"))members.add(line.substring(2));else if(line.startsWith("S:")){String[] p=line.substring(2).split(":");if(p.length>=2){savings.put(p[0],Double.parseDouble(p[1]));if(!members.contains(p[0]))members.add(p[0]);}}else if(line.startsWith("L:")){String[] p=line.substring(2).split(":");if(p.length>=4)loans.put(p[0],new Loan(Double.parseDouble(p[1]),p[2],Double.parseDouble(p[3])));}}br.close();}catch(Exception e){}}
+          }
+          '''
+          open('app/src/main/java/com/zeu/savings/MainActivity.java','w').write(code)
+          PY
       - name: Build APK
         run: wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip && unzip -q gradle-8.5-bin.zip &&./gradle-8.5/bin/gradle assembleDebug
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: zeu-apk
+          name: zeu-apk-v2
           path: app/build/outputs/apk/debug/*.apk
