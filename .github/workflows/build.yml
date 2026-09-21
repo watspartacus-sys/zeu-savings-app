@@ -1,4 +1,4 @@
-name: Build Zeu APK
+name: Build
 on: [push]
 jobs:
   build:
@@ -9,15 +9,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Create Zeu App Files
+      - name: Create Files
         run: |
           rm -rf app
           mkdir -p app/src/main/java/com/zeu/savings
           echo "include ':app'" > settings.gradle
-          echo "buildscript{repositories{google();mavenCentral()}dependencies{classpath'com.android.tools.build:gradle:8.2.1'}}allprojects{repositories{google();mavenCentral()}}" > build.gradle
-          printf "apply plugin:'com.android.application'\nandroid{namespace'com.zeu.savings';compileSdk 34;defaultConfig{applicationId'com.zeu.savings';minSdk 21;targetSdk 34;versionCode 1;versionName'1.0'}}\n" > app/build.gradle
+          printf "buildscript{\n repositories{google();mavenCentral()}\n dependencies{classpath 'com.android.tools.build:gradle:8.2.1'}\n}\nallprojects{repositories{google();mavenCentral()}}\n" > build.gradle
+          printf "apply plugin:'com.android.application'\nandroid{\n namespace'com.zeu.savings'\n compileSdk 34\n defaultConfig{applicationId'com.zeu.savings';minSdk 21;targetSdk 34;versionCode 1;versionName'1.0'}\n}\n" > app/build.gradle
           echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application android:label="Zeu Savings"><activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application></manifest>' > app/src/main/AndroidManifest.xml
-          printf 'package com.zeu.savings;\nimport android.app.Activity;\nimport android.os.Bundle;\nimport android.widget.TextView;\npublic class MainActivity extends Activity{protected void onCreate(Bundle b){super.onCreate(b);TextView t=new TextView(this);t.setText("ZEU SAVINGS - Offline Village App");setContentView(t);}}\n' > app/src/main/java/com/zeu/savings/MainActivity.java
+          printf 'package com.zeu.savings;\nimport android.app.Activity;\nimport android.os.Bundle;\nimport android.widget.TextView;\npublic class MainActivity extends Activity{protected void onCreate(Bundle b){super.onCreate(b);TextView t=new TextView(this);t.setText("ZEU SAVINGS Offline");setContentView(t);}}\n' > app/src/main/java/com/zeu/savings/MainActivity.java
       - name: Build APK
         run: wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip && unzip -q gradle-8.5-bin.zip &&./gradle-8.5/bin/gradle assembleDebug
       - name: Upload APK
